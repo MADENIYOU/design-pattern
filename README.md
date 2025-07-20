@@ -36,17 +36,75 @@ L'architecture du projet a été conçue pour offrir une flexibilité maximale e
 
 ## Description Détaillée des Fichiers
 
-*   `ApplicationCraqueur.java`: **Point d'entrée.** Analyse les arguments, choisit les fabriques appropriées (une pour la stratégie, une pour la cible), leur demande de créer les objets, puis lance l'attaque.
+Le code source est entièrement contenu dans le package `passwordcracker`.
 
-*   `FabriqueStrategieAttaque.java` & `FabriqueCible.java`: **Interfaces des Fabriques Abstraites.**
+*   `ApplicationCraqueur.java`
+    *   **Rôle :** Point d'entrée principal de l'application. C'est la classe qui orchestre l'ensemble du processus de cassage de mot de passe.
+    *   **Fonctionnalités :**
+        *   **Analyse des arguments de la ligne de commande :** Interprète les paramètres `--type` (bruteforce/dictionnaire), `--target` (local/en_ligne), `--login` (nom d'utilisateur), `--url` (pour les cibles en ligne), `--dict` (chemin du dictionnaire), et `--length` (longueur des mots de passe pour la force brute).
+        *   **Sélection des Fabriques :** En fonction des arguments `--type` et `--target`, elle instancie dynamiquement la `FabriqueStrategieAttaque` et la `FabriqueCible` appropriées.
+        *   **Création des Objets :** Utilise les fabriques sélectionnées pour créer une instance de `StrategieAttaque` et une instance de `Cible`.
+        *   **Lancement de l'Attaque :** Appelle la méthode `craquer()` de la stratégie d'attaque, en lui passant l'objet `Cible` et le nom d'utilisateur.
+        *   **Affichage de la Configuration :** Affiche un résumé des paramètres d'attaque avant de commencer.
 
-*   `FabriqueBruteForce.java`, `FabriqueDictionnaire.java`, `FabriqueCibleLocale.java`, `FabriqueCibleEnLigne.java`: **Fabriques Concrètes** qui encapsulent la logique de création de chaque composant.
+*   `FabriqueStrategieAttaque.java`
+    *   **Rôle :** Interface de la Fabrique Abstraite pour la création de stratégies d'attaque.
+    *   **Fonctionnalités :** Définit une seule méthode, `creerStrategieAttaque()`, qui doit être implémentée par toutes les fabriques concrètes de stratégies pour retourner une instance de `StrategieAttaque`.
 
-*   `StrategieAttaque.java` & `Cible.java`: **Interfaces** pour les stratégies et les cibles.
+*   `FabriqueBruteForce.java`
+    *   **Rôle :** Fabrique concrète pour la création d'une stratégie d'attaque par force brute.
+    *   **Fonctionnalités :** Implémente `FabriqueStrategieAttaque`. Sa méthode `creerStrategieAttaque()` retourne une nouvelle instance de `AttaqueBruteForce`, en lui passant l'alphabet de caractères à utiliser et les longueurs minimale et maximale des mots de passe à tester. Elle inclut une méthode utilitaire `genererAlphabet()` pour construire l'alphabet en fonction de critères (minuscules, majuscules, chiffres, symboles).
 
-*   `AttaqueBruteForce.java`, `AttaqueDictionnaire.java`, `CibleLocale.java`, `CibleEnLigne.java`: **Implémentations concrètes** des stratégies et des cibles.
+*   `FabriqueDictionnaire.java`
+    *   **Rôle :** Fabrique concrète pour la création d'une stratégie d'attaque par dictionnaire.
+    *   **Fonctionnalités :** Implémente `FabriqueStrategieAttaque`. Sa méthode `creerStrategieAttaque()` retourne une nouvelle instance de `AttaqueDictionnaire`, en lui passant le chemin du fichier dictionnaire à utiliser.
 
-*   `dictionnaire.txt`: Fichier de mots de passe pour l'attaque par dictionnaire.
+*   `FabriqueCible.java`
+    *   **Rôle :** Interface de la Fabrique Abstraite pour la création de cibles d'authentification.
+    *   **Fonctionnalités :** Définit une seule méthode, `creerCible()`, qui doit être implémentée par toutes les fabriques concrètes de cibles pour retourner une instance de `Cible`.
+
+*   `FabriqueCibleLocale.java`
+    *   **Rôle :** Fabrique concrète pour la création d'une cible d'authentification locale.
+    *   **Fonctionnalités :** Implémente `FabriqueCible`. Sa méthode `creerCible()` retourne une nouvelle instance de `CibleLocale`.
+
+*   `FabriqueCibleEnLigne.java`
+    *   **Rôle :** Fabrique concrète pour la création d'une cible d'authentification en ligne.
+    *   **Fonctionnalités :** Implémente `FabriqueCible`. Sa méthode `creerCible()` retourne une nouvelle instance de `CibleEnLigne`, en lui passant l'URL de la cible en ligne.
+
+*   `StrategieAttaque.java`
+    *   **Rôle :** Interface du patron Stratégie.
+    *   **Fonctionnalités :** Définit le contrat pour toutes les stratégies d'attaque. Elle déclare la méthode `craquer(Cible cible, String nomUtilisateur)`, qui prend en paramètre l'objet `Cible` à attaquer et le nom d'utilisateur cible.
+
+*   `AttaqueBruteForce.java`
+    *   **Rôle :** Implémentation concrète de la stratégie d'attaque par force brute.
+    *   **Fonctionnalités :**
+        *   **Génération de Combinaisons :** Utilise un algorithme récursif pour générer systématiquement toutes les combinaisons de mots de passe possibles en fonction de l'alphabet et des longueurs spécifiées.
+        *   **Multithreading :** Emploie un `ExecutorService` pour paralléliser la génération et le test des mots de passe sur plusieurs threads, exploitant ainsi pleinement les cœurs du processeur pour une performance maximale.
+        *   **Rapport de Progression :** Affiche en temps réel le nombre d'essais, la vitesse de l'attaque (mots de passe par seconde) et le mot de passe actuellement testé. Le rapport est mis à jour soit après un certain nombre d'essais, soit après un certain intervalle de temps (pour les attaques lentes comme celles en ligne).
+        *   **Arrêt Précoce :** S'arrête immédiatement dès que le mot de passe est trouvé.
+
+*   `AttaqueDictionnaire.java`
+    *   **Rôle :** Implémentation concrète de la stratégie d'attaque par dictionnaire.
+    *   **Fonctionnalités :**
+        *   **Chargement du Dictionnaire :** Lit les mots de passe à partir d'un fichier texte spécifié (`dictionnaire.txt` par défaut), un mot de passe par ligne.
+        *   **Test Séquentiel :** Itère sur chaque mot de passe du dictionnaire et tente de s'authentifier auprès de la cible.
+        *   **Rapport Simple :** Affiche chaque mot de passe testé et s'arrête dès que le mot de passe est trouvé.
+
+*   `Cible.java`
+    *   **Rôle :** Interface du patron Pont (côté implémentation).
+    *   **Fonctionnalités :** Définit le contrat pour toutes les cibles d'authentification. Elle déclare la méthode `authentifier(String nomUtilisateur, String motDePasse)`, qui prend en paramètre le nom d'utilisateur et le mot de passe à tester, et retourne `true` si l'authentification réussit, `false` sinon.
+
+*   `CibleLocale.java`
+    *   **Rôle :** Implémentation concrète d'une cible d'authentification locale.
+    *   **Fonctionnalités :** Simule une authentification contre un système local. Pour des raisons de performance et de simplicité, la vérification du mot de passe est effectuée directement en mémoire contre des identifiants codés en dur (`admin` / `pass123`). Cela la rend extrêmement rapide et idéale pour les tests de performance de l'algorithme de force brute.
+
+*   `CibleEnLigne.java`
+    *   **Rôle :** Implémentation concrète d'une cible d'authentification en ligne.
+    *   **Fonctionnalités :** Effectue de véritables requêtes HTTP POST vers une URL de connexion spécifiée. Elle encode le nom d'utilisateur et le mot de passe, envoie la requête, et analyse la réponse du serveur pour déterminer si l'authentification a réussi (par exemple, en cherchant une chaîne de caractères spécifique comme "Connexion réussie" dans la réponse).
+
+*   `dictionnaire.txt`
+    *   **Rôle :** Fichier de données.
+    *   **Contenu :** Un simple fichier texte où chaque ligne représente un mot de passe potentiel à tester par l'`AttaqueDictionnaire`.
 
 ## Explication des Imports Java
 
