@@ -6,7 +6,9 @@ public class ApplicationCraqueur {
         String typeCible = null;
         String nomUtilisateur = null;
         String urlCible = null;
-        String cheminDictionnaire = "dictionnaire.txt"; // Chemin par défaut
+        String cheminDictionnaire = "dictionnaire.txt";
+        int minLength = 1;
+        int maxLength = 7; // Longueur par défaut
 
         // Analyse des arguments
         for (int i = 0; i < args.length; i++) {
@@ -26,42 +28,65 @@ public class ApplicationCraqueur {
                 case "--dict":
                     if (i + 1 < args.length) cheminDictionnaire = args[++i];
                     break;
+                case "--length":
+                     if (i + 1 < args.length) {
+                        try {
+                            maxLength = Integer.parseInt(args[++i]);
+                            minLength = maxLength; // Pour tester une longueur spécifique
+                        } catch (NumberFormatException e) {
+                            System.err.println("Erreur: La longueur doit être un nombre.");
+                            return;
+                        }
+                    }
+                    break;
             }
         }
 
         if (typeAttaque == null || typeCible == null || nomUtilisateur == null) {
-            System.out.println("Utilisation : java -cp src passwordcracker.ApplicationCraqueur --type <bruteforce|dictionnaire> --target <local|en_ligne> --login <nom_utilisateur> [--url <url_cible>] [--dict <chemin_fichier>]");
+            System.out.println("Utilisation : java -cp src passwordcracker.ApplicationCraqueur --type <bruteforce|dictionnaire> --target <local|en_ligne> --login <nom_utilisateur> [--url <url_cible>] [--dict <chemin_fichier>] [--length <longueur>]");
             return;
         }
 
-        FabriqueCraqueur fabrique = null;
+        // --- Création dynamique avec les fabriques ---
 
-        if ("bruteforce".equalsIgnoreCase(typeAttaque) && "local".equalsIgnoreCase(typeCible)) {
-            fabrique = new FabriqueBruteForceLocale();
-        } else if ("dictionnaire".equalsIgnoreCase(typeAttaque) && "en_ligne".equalsIgnoreCase(typeCible)) {
+        // 1. Choisir la fabrique de stratégie
+        FabriqueStrategieAttaque fabriqueStrategie;
+        if ("bruteforce".equalsIgnoreCase(typeAttaque)) {
+            fabriqueStrategie = new FabriqueBruteForce(minLength, maxLength);
+        } else if ("dictionnaire".equalsIgnoreCase(typeAttaque)) {
+            fabriqueStrategie = new FabriqueDictionnaire(cheminDictionnaire);
+        } else {
+            System.out.println("Type d'attaque non supporté.");
+            return;
+        }
+
+        // 2. Choisir la fabrique de cible
+        FabriqueCible fabriqueCible;
+        if ("local".equalsIgnoreCase(typeCible)) {
+            fabriqueCible = new FabriqueCibleLocale();
+        } else if ("en_ligne".equalsIgnoreCase(typeCible)) {
             if (urlCible == null) {
                 System.out.println("Erreur : --url est requis pour les cibles en ligne.");
                 return;
             }
-            fabrique = new FabriqueDictionnaireEnLigne(urlCible, cheminDictionnaire);
+            fabriqueCible = new FabriqueCibleEnLigne(urlCible);
         } else {
-            System.out.println("Combinaison non supportée de type d'attaque et de type de cible.");
+            System.out.println("Type de cible non supporté.");
             return;
         }
 
-        Cible cible = fabrique.creerCible();
-        StrategieAttaque strategie = fabrique.creerStrategieAttaque();
+        // 3. Créer les objets en utilisant les fabriques
+        StrategieAttaque strategie = fabriqueStrategie.creerStrategieAttaque();
+        Cible cible = fabriqueCible.creerCible();
 
+        // --- Lancement de l'attaque ---
         System.out.println("\nConfiguration de l'attaque :");
         System.out.println("  - Type d'attaque : " + typeAttaque);
         System.out.println("  - Type de cible   : " + typeCible);
         System.out.println("  - Nom utilisateur: " + nomUtilisateur);
-        if (urlCible != null) {
-            System.out.println("  - URL Cible       : " + urlCible);
-        }
-        if ("dictionnaire".equalsIgnoreCase(typeAttaque)) {
-            System.out.println("  - Dictionnaire  : " + cheminDictionnaire);
-        }
+        if (urlCible != null) System.out.println("  - URL Cible       : " + urlCible);
+        if ("dictionnaire".equalsIgnoreCase(typeAttaque)) System.out.println("  - Dictionnaire  : " + cheminDictionnaire);
+        if ("bruteforce".equalsIgnoreCase(typeAttaque)) System.out.println("  - Longueur testée: " + maxLength);
 
         strategie.craquer(cible, nomUtilisateur);
     }

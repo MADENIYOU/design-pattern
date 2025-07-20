@@ -1,6 +1,5 @@
 package passwordcracker;
 
-public interface FabriqueCraqueur {
+public interface FabriqueStrategieAttaque {
     StrategieAttaque creerStrategieAttaque();
-    Cible creerCible();
 }

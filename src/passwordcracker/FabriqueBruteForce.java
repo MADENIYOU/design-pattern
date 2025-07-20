@@ -1,17 +1,18 @@
 package passwordcracker;
 
-public class FabriqueBruteForceLocale implements FabriqueCraqueur {
+public class FabriqueBruteForce implements FabriqueStrategieAttaque {
+    private final int minLength;
+    private final int maxLength;
 
-    @Override
-    public StrategieAttaque creerStrategieAttaque() {
-        // Alphabet et longueur pour la force brute
-        char[] alphabet = genererAlphabet(true, true, true, true);
-        return new AttaqueBruteForce(alphabet, 7, 7);
+    public FabriqueBruteForce(int minLength, int maxLength) {
+        this.minLength = minLength;
+        this.maxLength = maxLength;
     }
 
     @Override
-    public Cible creerCible() {
-        return new CibleLocale();
+    public StrategieAttaque creerStrategieAttaque() {
+        char[] alphabet = genererAlphabet(true, true, true, true);
+        return new AttaqueBruteForce(alphabet, minLength, maxLength);
     }
 
     private static char[] genererAlphabet(boolean minuscules, boolean majuscules, boolean chiffres, boolean symboles) {

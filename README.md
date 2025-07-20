@@ -12,65 +12,41 @@ Ces attaques peuvent être dirigées contre deux types de cibles :
 
 ## Architecture et Patrons de Conception
 
-L'architecture du projet repose sur l'interaction de trois patrons de conception majeurs qui assurent le découplage, la flexibilité et l'extensibilité du code.
+L'architecture du projet a été conçue pour offrir une flexibilité maximale en découplant totalement la création des stratégies d'attaque de la création des cibles. Pour ce faire, elle s'appuie sur **deux hiérarchies de Fabriques Abstraites (Abstract Factory)**.
 
-### 1. Patron de Conception Fabrique Abstraite (Abstract Factory)
+### 1. Hiérarchie des Fabriques de Stratégies
+*   **Fabrique Abstraite :** `FabriqueStrategieAttaque` (Interface)
+*   **Fabriques Concrètes :**
+    *   `FabriqueBruteForce` : Crée un objet `AttaqueBruteForce`.
+    *   `FabriqueDictionnaire` : Crée un objet `AttaqueDictionnaire`.
 
-C'est le pilier de l'architecture. Il fournit une interface pour créer des **familles d'objets liés** sans avoir à spécifier leurs classes concrètes.
+### 2. Hiérarchie des Fabriques de Cibles
+*   **Fabrique Abstraite :** `FabriqueCible` (Interface)
+*   **Fabriques Concrètes :**
+    *   `FabriqueCibleLocale` : Crée un objet `CibleLocale`.
+    *   `FabriqueCibleEnLigne` : Crée un objet `CibleEnLigne`.
 
-*   **Rôle dans le projet :**
-    *   L'interface `FabriqueCraqueur` définit le contrat pour toutes les fabriques. Chaque fabrique doit savoir comment créer une `StrategieAttaque` et une `Cible`.
-    *   Les classes `FabriqueBruteForceLocale` et `FabriqueDictionnaireEnLigne` sont les implémentations concrètes. Leur responsabilité est de créer une paire d'objets cohérents et conçus pour fonctionner ensemble (par exemple, une attaque par dictionnaire avec une cible en ligne).
-*   **Avantages :**
-    *   **Cohérence :** Garantit que les objets créés sont compatibles entre eux.
-    *   **Extensibilité :** Pour ajouter une nouvelle combinaison (ex: force brute sur une cible en ligne), il suffit de créer une nouvelle classe `FabriqueBruteForceEnLigne` sans toucher au code client.
+### Rôle des Patrons de Conception
 
-### 2. Patron de Conception Stratégie (Strategy)
+*   **Abstract Factory :** Ce patron est utilisé deux fois. Il permet à l'application principale de décider au moment de l'exécution quelle fabrique de stratégie et quelle fabrique de cible instancier en fonction des arguments de l'utilisateur. Le code client est ainsi complètement indépendant des classes concrètes des stratégies et des cibles.
 
-Ce patron permet de définir une famille d'algorithmes, de les encapsuler et de les rendre interchangeables.
+*   **Strategy :** L'interface `StrategieAttaque` et ses implémentations (`AttaqueBruteForce`, `AttaqueDictionnaire`) permettent de changer l'algorithme d'attaque à la volée.
 
-*   **Rôle dans le projet :**
-    *   L'interface `StrategieAttaque` définit la méthode commune `craquer()`.
-    *   Les classes `AttaqueBruteForce` et `AttaqueDictionnaire` sont des stratégies concrètes. Elles contiennent les algorithmes spécifiques pour chaque type d'attaque.
-*   **Avantages :**
-    *   **Flexibilité :** Le client (la classe `ApplicationCraqueur`) peut utiliser n'importe quelle stratégie d'attaque de manière transparente.
-    *   **Lisibilité :** La logique complexe de chaque attaque est isolée dans sa propre classe, ce qui rend le code plus propre.
-
-### 3. Patron de Conception Pont (Bridge)
-
-Ce patron, plus subtil, découple une abstraction de son implémentation pour qu'elles puissent évoluer indépendamment.
-
-*   **Rôle dans le projet :**
-    Il connecte l'abstraction `StrategieAttaque` avec les implémentations de `Cible`. La stratégie d'attaque détient une référence vers un objet `Cible` et interagit avec lui via son interface.
-*   **Avantages :**
-    *   **Indépendance :** On peut ajouter de nouvelles cibles (`CibleFTP`, `CibleSSH`...) sans jamais modifier les stratégies d'attaque. Inversement, on peut créer de nouvelles stratégies qui fonctionneront avec toutes les cibles existantes.
-    *   **Modularité Maximale :** C'est ce patron qui permet le plus haut niveau de découplage du projet.
+*   **Bridge :** Ce patron relie les stratégies d'attaque aux cibles. Une stratégie contient une référence à une `Cible` et peut opérer sur n'importe quelle implémentation de cette interface, ce qui permet de combiner n'importe quelle attaque avec n'importe quelle cible.
 
 ## Description Détaillée des Fichiers
 
-Le code source est entièrement contenu dans le package `passwordcracker`.
+*   `ApplicationCraqueur.java`: **Point d'entrée.** Analyse les arguments, choisit les fabriques appropriées (une pour la stratégie, une pour la cible), leur demande de créer les objets, puis lance l'attaque.
 
-*   `ApplicationCraqueur.java`: **Point d'entrée.** Cette classe analyse les arguments de la ligne de commande (`--type`, `--target`, etc.), sélectionne la `FabriqueCraqueur` appropriée, et lui demande de créer la stratégie et la cible. Elle orchestre ensuite le lancement de l'attaque.
+*   `FabriqueStrategieAttaque.java` & `FabriqueCible.java`: **Interfaces des Fabriques Abstraites.**
 
-*   `FabriqueCraqueur.java`: **Interface de la Fabrique Abstraite.** Définit les méthodes que toutes les fabriques concrètes doivent implémenter : `creerStrategieAttaque()` et `creerCible()`.
+*   `FabriqueBruteForce.java`, `FabriqueDictionnaire.java`, `FabriqueCibleLocale.java`, `FabriqueCibleEnLigne.java`: **Fabriques Concrètes** qui encapsulent la logique de création de chaque composant.
 
-*   `FabriqueBruteForceLocale.java`: **Fabrique Concrète.** Implémente `FabriqueCraqueur`. Elle est spécialisée dans la création d'une `AttaqueBruteForce` et d'une `CibleLocale`. C'est ici que l'on configure les paramètres de l'attaque par force brute (longueur des mots de passe, alphabet à utiliser).
+*   `StrategieAttaque.java` & `Cible.java`: **Interfaces** pour les stratégies et les cibles.
 
-*   `FabriqueDictionnaireEnLigne.java`: **Fabrique Concrète.** Implémente `FabriqueCraqueur`. Elle crée une `AttaqueDictionnaire` et une `CibleEnLigne`, en leur passant les dépendances nécessaires comme l'URL de la cible et le chemin du fichier dictionnaire.
+*   `AttaqueBruteForce.java`, `AttaqueDictionnaire.java`, `CibleLocale.java`, `CibleEnLigne.java`: **Implémentations concrètes** des stratégies et des cibles.
 
-*   `StrategieAttaque.java`: **Interface de la Stratégie.** Définit la méthode `craquer(Cible cible, String nomUtilisateur)` que toutes les stratégies d'attaque doivent fournir.
-
-*   `AttaqueBruteForce.java`: **Stratégie Concrète.** Contient la logique de l'attaque par force brute. Elle est optimisée pour la vitesse en utilisant un `ExecutorService` pour répartir le travail sur plusieurs threads. Elle affiche également une barre de progression en temps réel.
-
-*   `AttaqueDictionnaire.java`: **Stratégie Concrète.** Implémente l'attaque par dictionnaire. Elle lit un fichier texte (`dictionnaire.txt` par défaut) et teste chaque mot de passe contre la cible.
-
-*   `Cible.java`: **Interface du Pont (côté implémentation).** Définit la méthode `authentifier(String nomUtilisateur, String motDePasse)` que toutes les cibles doivent implémenter.
-
-*   `CibleLocale.java`: **Implémentation Concrète de Cible.** Simule une authentification locale. La vérification du mot de passe (`pass123` pour l'utilisateur `admin`) est faite directement en mémoire pour une performance maximale, ce qui est idéal pour tester la vitesse de l'algorithme de force brute.
-
-*   `CibleEnLigne.java`: **Implémentation Concrète de Cible.** Simule une authentification sur un service web. Elle envoie les identifiants via une requête HTTP POST à l'URL fournie et analyse la réponse pour déterminer si l'authentification a réussi.
-
-*   `dictionnaire.txt`: Un simple fichier texte contenant des mots de passe courants, utilisé par `AttaqueDictionnaire`.
+*   `dictionnaire.txt`: Fichier de mots de passe pour l'attaque par dictionnaire.
 
 ## Explication des Imports Java
 
@@ -100,29 +76,46 @@ Voici le détail des packages importés dans les classes clés du projet.
 Assurez-vous d'être à la racine du projet.
 
 #### 1. Compiler le projet
-La commande suivante compile tous les fichiers `.java` et place les fichiers `.class` dans le répertoire `src`.
 ```bash
 javac -d src -cp src src/passwordcracker/*.java
 ```
 
-#### 2. Exécuter une attaque
+#### 2. Exécuter les 4 variantes
 
-*   **Attaque par Force Brute sur une Cible Locale**
+*   **1. Attaque par Force Brute sur Cible Locale**
     *(Cherche un mot de passe de 7 caractères pour l'utilisateur 'admin')*
     ```bash
-    java -cp src passwordcracker.ApplicationCraqueur --type bruteforce --target local --login admin
+    java -cp src passwordcracker.ApplicationCraqueur --type bruteforce --target local --login admin --length 7
     ```
 
-*   **Attaque par Dictionnaire sur une Cible en Ligne**
-    *(Nécessite un serveur web local avec le script `login.php` du projet)*
+*   **2. Attaque par Force Brute sur Cible en Ligne**
+    ```bash
+    java -cp src passwordcracker.ApplicationCraqueur --type bruteforce --target en_ligne --login admin --url "http://localhost/ProjetPC/login.php" --length 4
+    ```
+
+*   **3. Attaque par Dictionnaire sur Cible Locale**
+    ```bash
+    java -cp src passwordcracker.ApplicationCraqueur --type dictionnaire --target local --login admin
+    ```
+
+*   **4. Attaque par Dictionnaire sur Cible en Ligne**
     ```bash
     java -cp src passwordcracker.ApplicationCraqueur --type dictionnaire --target en_ligne --login admin --url "http://localhost/ProjetPC/login.php"
     ```
 
-*   **Utiliser un autre dictionnaire**
-    ```bash
-    java -cp src passwordcracker.ApplicationCraqueur --type dictionnaire --target en_ligne --login admin --url "http://localhost/ProjetPC/login.php" --dict "chemin/vers/mon_dico.txt"
-    ```
+## Pistes d'amélioration
+
+Le projet actuel est une base solide, mais plusieurs améliorations pourraient être envisagées pour le rendre encore plus puissant et réaliste.
+
+*   **Attaques Hybrides :** Créer une nouvelle stratégie `AttaqueHybride` qui utilise d'abord un dictionnaire, puis enchaîne avec une attaque par force brute sur les mots de passe du dictionnaire en y ajoutant des chiffres ou des symboles (ex: `password` -> `password123`, `password!`).
+
+*   **Gestion Avancée du Multithreading :** Permettre à l'utilisateur de spécifier le nombre de threads à utiliser via un argument (`--threads 8`). Pour l'attaque par dictionnaire, on pourrait également la paralléliser en divisant le fichier dictionnaire en plusieurs segments, chaque thread testant une partie de la liste.
+
+*   **Support de Cibles Supplémentaires :** Ajouter de nouvelles implémentations de `Cible` pour d'autres protocoles, comme `CibleFTP`, `CibleSSH` ou `CibleBaseDeDonnees`. Grâce à l'architecture actuelle, cela ne nécessiterait aucune modification des stratégies d'attaque existantes.
+
+*   **Rapports et Sauvegarde de Session :** Ajouter une option pour sauvegarder la progression d'une attaque par force brute dans un fichier, afin de pouvoir la reprendre plus tard. On pourrait également générer un rapport à la fin de l'attaque (temps écoulé, mot de passe trouvé, vitesse moyenne).
+
+*   **Interface Graphique (GUI) :** Envelopper la logique du projet dans une interface graphique simple (avec Swing ou JavaFX) pour une utilisation plus conviviale.
 
 ## Diagramme d'Architecture
 

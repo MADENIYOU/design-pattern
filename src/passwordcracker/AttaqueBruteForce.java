@@ -13,6 +13,8 @@ public class AttaqueBruteForce implements StrategieAttaque {
     private final AtomicBoolean passwordFound = new AtomicBoolean(false);
     private final AtomicLong attemptCounter = new AtomicLong(0);
     private static final int REPORT_INTERVAL = 500_000; // Afficher le statut tous les N essais
+    private static final long TIME_REPORT_INTERVAL_MS = 1000; // Afficher le statut toutes les 5 secondes
+    private volatile long lastReportTime = System.currentTimeMillis();
 
     public AttaqueBruteForce(char[] alphabet, int minLength, int maxLength) {
         this.alphabet = alphabet;
@@ -79,11 +81,14 @@ public class AttaqueBruteForce implements StrategieAttaque {
             return;
         }
         long attempts = attemptCounter.incrementAndGet();
+        long currentTime = System.currentTimeMillis();
 
-        if (attempts % REPORT_INTERVAL == 0) {
-            long elapsedTime = (System.currentTimeMillis() - startTime) / 1000;
+        // Rapport basé sur le nombre d'essais OU sur le temps
+        if (attempts % REPORT_INTERVAL == 0 || (currentTime - lastReportTime) >= TIME_REPORT_INTERVAL_MS) {
+            long elapsedTime = (currentTime - startTime) / 1000;
             long speed = elapsedTime > 0 ? attempts / elapsedTime : 0;
             System.out.printf("Essais: %d | Vitesse: %d mdp/s | Test en cours: %s\r", attempts, speed, pass);
+            lastReportTime = currentTime; // Mettre à jour le temps du dernier rapport
         }
 
         if (cible.authentifier(nomUtilisateur, pass)) {
