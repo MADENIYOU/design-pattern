@@ -1,4 +1,4 @@
-package passwordcrackerfactory;
+package passwordcracker;
 
 public interface FabriqueCraqueur {
     StrategieAttaque creerStrategieAttaque();
